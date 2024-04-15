@@ -118,9 +118,18 @@ const caterForCookiesInPath = (path) => {
 const getPath = (profileOrPath) => {
 	if (isPathFormat(profileOrPath)) {
 
-		const path = caterForCookiesInPath(profileOrPath)
+		let path = caterForCookiesInPath(profileOrPath)
 
 		if (!fs.existsSync(path)) {
+			
+			if (process.platform === 'darwin' || process.platform === 'linux') {
+				path += '/Cookies';
+			}
+
+			if (process.platform === 'win32') {
+				path += '\\Network\\Cookies';
+			}
+
 			throw new Error(`Path: ${path} not found`);
 		}
 
@@ -403,7 +412,8 @@ const getCookies = async (uri, format, callback, profileOrPath) => {
 								cookie.value = dpapi.unprotectData(encryptedValue, null, 'CurrentUser').toString('utf-8');
 
 							} else if (encryptedValue[0] == 0x76 && encryptedValue[1] == 0x31 && encryptedValue[2] == 0x30 ){
-								localState = JSON.parse(fs.readFileSync(os.homedir() + '/AppData/Local/Google/Chrome/User Data/Local State'));
+								const localStatePath = !isPathFormat(profileOrPath) ? os.homedir() + '/AppData/Local/Google/Chrome/User Data/Local State' : (process.platform === 'win32' ? path.split('\\Network\\Cookies')[0].substring(0, path.split('\\Network\\Cookies')[0].lastIndexOf("\\")) + '\\Local State' : path.split('/Cookies')[0].substring(0, path.split('/Cookies')[0].lastIndexOf("/")) + '/Local State');
+								localState = JSON.parse(fs.readFileSync(localStatePath));
 								b64encodedKey = localState.os_crypt.encrypted_key;
 								encryptedKey = new Buffer.from(b64encodedKey,'base64');
 								key = dpapi.unprotectData(encryptedKey.slice(5, encryptedKey.length), null, 'CurrentUser');
